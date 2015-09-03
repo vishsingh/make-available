@@ -7,37 +7,29 @@ runit() {
 */
 
 import "fmt"
-import "os/exec"
+//import "os"
+//import "os/exec"
+//import "flag"
 
-func withEcho(thunk func()) {
-	fmt.Printf("starting\n")
-	defer fmt.Printf("ending\n")
-
-	thunk()
+type config struct {
+     host string // Remote host holding the encfs tree
+     hostdir string // Path to the encfs tree on the remote host
+     encfsConfig string // Path to the encfs config on the local filesystem
+     group string // If run as root, users in this group will be able to access the mounted data
 }
 
 func main() {
-	fmt.Printf("hello\n")
+	cfg := getConfig()
 
-	c := exec.Command("/bin/ls")
+	fmt.Printf("the host is %s\n", cfg.host)
 
-	output, err := c.Output()
-
-	if err != nil {
-		fmt.Printf("error was %s\n", err.Error())
-	} else {
-		fmt.Printf("no error\n")
-		fmt.Printf("output was %q\n", output)
-	}
-
-	fmt.Printf("\n")
-
-	withEcho(func() {
-		fmt.Printf("middle\n")
-
-		withEcho(func() {
-			fmt.Printf("inside\n")
-			panic("OOPS")
-		})
-	})
+	// mountWorkspace := "/tmp/makeavailmnt"
+	// err := os.Mkdir(mountWorkspace, 0700)
+	// if err != nil {
+	//    return
+	// }
+	//
+	// defer os.Remove(mountWorkspace)	
+	//
+	// fmt.Printf("successfully created dir\n")
 }
