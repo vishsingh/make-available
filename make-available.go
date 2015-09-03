@@ -7,8 +7,8 @@ runit() {
 */
 
 import "fmt"
-//import "os"
-//import "os/exec"
+import "os"
+import "os/exec"
 //import "flag"
 
 type config struct {
@@ -18,18 +18,28 @@ type config struct {
      group string // If run as root, users in this group will be able to access the mounted data
 }
 
+func withStdStreams(cmd *exec.Cmd) *exec.Cmd {
+     newCmd := *cmd
+
+     newCmd.Stdin = os.Stdin
+     newCmd.Stdout = os.Stdout
+     newCmd.Stderr = os.Stderr
+
+     return &newCmd
+}
+
 func main() {
 	cfg := getConfig()
 
 	fmt.Printf("the host is %s\n", cfg.host)
 
-	// mountWorkspace := "/tmp/makeavailmnt"
-	// err := os.Mkdir(mountWorkspace, 0700)
-	// if err != nil {
-	//    return
-	// }
-	//
-	// defer os.Remove(mountWorkspace)	
-	//
-	// fmt.Printf("successfully created dir\n")
+	mountWorkspace := "/tmp/makeavailmnt"
+	err := os.Mkdir(mountWorkspace, 0700)
+	if err != nil {
+	   panic("unable to create mount workspace")
+	}
+	defer os.Remove(mountWorkspace)	
+
+	bashCmd := withStdStreams(exec.Command("/bin/bash"))
+	bashCmd.Run()
 }
