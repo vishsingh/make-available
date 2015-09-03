@@ -28,6 +28,32 @@ func withStdStreams(cmd *exec.Cmd) *exec.Cmd {
      return &newCmd
 }
 
+// returns a function to perform the unmount
+func makeImageAvailable(mountPoint string, cfg *config) func() {
+     sshfsCmd := exec.Command("sshfs")
+
+     args := []string{
+     	       cfg.host + ":" + cfg.hostdir,
+     	       mountPoint,
+     }
+     sshfsCmd.Args = append(sshfsCmd.Args, args...)
+
+     sshfsCmd = withStdStreams(sshfsCmd)
+
+     err := sshfsCmd.Run()
+
+     if err != nil {
+     	panic("failed to perform sshfs mount")
+     }
+
+     return func() {
+	 err := exec.Command("fusermount", "-u", mountPoint).Run()
+	 if err != nil {
+	    panic("failed to perform sshfs unmount")
+	 }
+     }
+}
+
 func main() {
 	cfg := getConfig()
 
@@ -39,6 +65,16 @@ func main() {
 	   panic("unable to create mount workspace")
 	}
 	defer os.Remove(mountWorkspace)	
+
+	mountPoint := mountWorkspace + "/mnt"
+	err = os.Mkdir(mountPoint, 0755)
+	if err != nil {
+	   panic("unable to create mount point")
+	}
+	defer os.Remove(mountPoint)
+
+	unmounter := makeImageAvailable(mountPoint, cfg)
+	defer unmounter()
 
 	bashCmd := withStdStreams(exec.Command("/bin/bash"))
 	bashCmd.Dir = mountWorkspace
