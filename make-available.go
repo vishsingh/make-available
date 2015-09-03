@@ -41,5 +41,6 @@ func main() {
 	defer os.Remove(mountWorkspace)	
 
 	bashCmd := withStdStreams(exec.Command("/bin/bash"))
+	bashCmd.Dir = mountWorkspace
 	bashCmd.Run()
 }
