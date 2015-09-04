@@ -35,6 +35,8 @@ func makeImageAvailable(mountPoint string, cfg *config) func() {
      args := []string{
      	       cfg.host + ":" + cfg.hostdir,
      	       mountPoint,
+	       "-o",
+	       "ro",
      }
      sshfsCmd.Args = append(sshfsCmd.Args, args...)
 
