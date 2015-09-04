@@ -56,6 +56,27 @@ func makeImageAvailable(mountPoint string, cfg *config) func() {
      }
 }
 
+// returns a function to perform the unmount
+func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) func() {
+     encfsCmd := exec.Command("encfs", encryptedDir, mountPoint)
+
+     encfsCmd.Env = os.Environ()
+     encfsCmd.Env = append(encfsCmd.Env, "ENCFS6_CONFIG=" + encFsConfigPath)
+     
+     encfsCmd = withStdStreams(encfsCmd)
+
+     if err := encfsCmd.Run(); err != nil {
+     	panic("failed to perform encfs mount")
+     }
+
+     return func() {
+	 err := exec.Command("fusermount", "-u", mountPoint).Run()
+	 if err != nil {
+	    panic("failed to perform encfs unmount")
+	 }
+     }
+}
+
 func main() {
 	cfg := getConfig()
 
@@ -77,6 +98,15 @@ func main() {
 
 	unmounter := makeImageAvailable(mountPoint, cfg)
 	defer unmounter()
+
+	encfsMountPoint := mountWorkspace + "/emnt"
+	if err = os.Mkdir(encfsMountPoint, 0755); err != nil {
+	   panic("unable to create encfs mount point")
+	}
+	defer os.Remove(encfsMountPoint)
+
+	encfsUnmounter := mountEncFs(cfg.encfsConfig, mountPoint, encfsMountPoint)
+	defer encfsUnmounter()	
 
 	bashCmd := withStdStreams(exec.Command("/bin/bash"))
 	bashCmd.Dir = mountWorkspace
