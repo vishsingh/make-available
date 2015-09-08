@@ -6,7 +6,7 @@ runit() {
 }
 */
 
-//import "fmt"
+import "fmt"
 import "os"
 import "os/exec"
 //import "flag"
@@ -26,6 +26,24 @@ func withStdStreams(cmd *exec.Cmd) *exec.Cmd {
      newCmd.Stderr = os.Stderr
 
      return &newCmd
+}
+
+type commandLineError struct {
+     c exec.Cmd
+     origErr error
+}
+
+func (e *commandLineError) Error() string {
+     return fmt.Sprintf("command %#v with args %#v failed with error %#v", e.c.Path, e.c.Args, e.origErr.Error())
+}
+
+// same as Run(), but the error value returned will contain the entire command line that failed
+func run(cmd *exec.Cmd) error {
+     err := cmd.Run()
+     if err != nil {
+     	return &commandLineError { *cmd, err }
+     }
+     return nil
 }
 
 // returns a function to perform the unmount
@@ -49,7 +67,7 @@ func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
      }
 
      return func() error {
-	 return exec.Command("fusermount", "-u", mountPoint).Run()
+	 return run(exec.Command("fusermount", "-u", mountPoint))
      }, nil
 }
 
@@ -67,14 +85,14 @@ func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) 
      }
 
      return func() error {
-	 return exec.Command("fusermount", "-u", mountPoint).Run()
+	 return run(exec.Command("fusermount", "-u", mountPoint))
      }, nil
 }
 
 func panicUnless(thunk func() error, panicStr string) {
      err := thunk()
      if err != nil {
-     	panic(panicStr)
+     	panic(fmt.Sprintf("%s: %s", panicStr, err.Error()))
      }
 }
 
