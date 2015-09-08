@@ -29,7 +29,7 @@ func withStdStreams(cmd *exec.Cmd) *exec.Cmd {
 }
 
 // returns a function to perform the unmount
-func makeImageAvailable(mountPoint string, cfg *config) func() {
+func makeImageAvailable(mountPoint string, cfg *config) (func(), error) {
      sshfsCmd := exec.Command("sshfs")
 
      args := []string{
@@ -45,7 +45,7 @@ func makeImageAvailable(mountPoint string, cfg *config) func() {
      err := sshfsCmd.Run()
 
      if err != nil {
-     	panic("failed to perform sshfs mount")
+     	return nil, err
      }
 
      return func() {
@@ -53,7 +53,7 @@ func makeImageAvailable(mountPoint string, cfg *config) func() {
 	 if err != nil {
 	    panic("failed to perform sshfs unmount")
 	 }
-     }
+     }, nil
 }
 
 // returns a function to perform the unmount
@@ -94,7 +94,10 @@ func main() {
 	}
 	defer os.Remove(mountPoint)
 
-	unmounter := makeImageAvailable(mountPoint, cfg)
+	unmounter, err := makeImageAvailable(mountPoint, cfg)
+	if err != nil {
+	   panic("failed to make image available")
+	}
 	defer unmounter()
 
 	encfsMountPoint := mountWorkspace + "/emnt"
