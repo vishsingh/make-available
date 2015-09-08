@@ -28,6 +28,10 @@ func withStdStreams(cmd *exec.Cmd) *exec.Cmd {
      return &newCmd
 }
 
+func makeCommand(name string, arg ...string) *exec.Cmd {
+     return withStdStreams(exec.Command(name, arg...))
+}
+
 type commandLineError struct {
      c exec.Cmd
      origErr error
@@ -48,7 +52,7 @@ func run(cmd *exec.Cmd) error {
 
 // returns a function to perform the unmount
 func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
-     sshfsCmd := exec.Command("sshfs")
+     sshfsCmd := makeCommand("sshfs")
 
      args := []string{
      	       cfg.host + ":" + cfg.hostdir,
@@ -58,8 +62,6 @@ func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
      }
      sshfsCmd.Args = append(sshfsCmd.Args, args...)
 
-     sshfsCmd = withStdStreams(sshfsCmd)
-
      err := sshfsCmd.Run()
 
      if err != nil {
@@ -67,25 +69,23 @@ func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
      }
 
      return func() error {
-	 return run(exec.Command("fusermount", "-u", mountPoint))
+	 return run(makeCommand("fusermount", "-u", mountPoint))
      }, nil
 }
 
 // returns a function to perform the unmount
 func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) (func() error, error) {
-     encfsCmd := exec.Command("encfs", encryptedDir, mountPoint)
+     encfsCmd := makeCommand("encfs", encryptedDir, mountPoint)
 
      encfsCmd.Env = os.Environ()
      encfsCmd.Env = append(encfsCmd.Env, "ENCFS6_CONFIG=" + encFsConfigPath)
      
-     encfsCmd = withStdStreams(encfsCmd)
-
      if err := encfsCmd.Run(); err != nil {
      	return nil, err
      }
 
      return func() error {
-	 return run(exec.Command("fusermount", "-u", mountPoint))
+	 return run(makeCommand("fusermount", "-u", mountPoint))
      }, nil
 }
 
@@ -131,7 +131,7 @@ func main() {
 	}
 	defer panicUnless(encfsUnmounter, "failed to unmount encfs")
 
-	bashCmd := withStdStreams(exec.Command("/bin/bash"))
+	bashCmd := makeCommand("/bin/bash")
 	bashCmd.Dir = mountWorkspace
 	bashCmd.Run()
 }
