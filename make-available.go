@@ -6,7 +6,7 @@ runit() {
 }
 */
 
-import "fmt"
+//import "fmt"
 import "os"
 import "os/exec"
 //import "flag"
@@ -79,8 +79,6 @@ func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) 
 
 func main() {
 	cfg := getConfig()
-
-	fmt.Printf("the host is %s\n", cfg.host)
 
 	mountWorkspace := "/tmp/makeavailmnt"
 	err := os.Mkdir(mountWorkspace, 0700)
