@@ -29,7 +29,7 @@ func withStdStreams(cmd *exec.Cmd) *exec.Cmd {
 }
 
 // returns a function to perform the unmount
-func makeImageAvailable(mountPoint string, cfg *config) (func(), error) {
+func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
      sshfsCmd := exec.Command("sshfs")
 
      args := []string{
@@ -48,16 +48,13 @@ func makeImageAvailable(mountPoint string, cfg *config) (func(), error) {
      	return nil, err
      }
 
-     return func() {
-	 err := exec.Command("fusermount", "-u", mountPoint).Run()
-	 if err != nil {
-	    panic("failed to perform sshfs unmount")
-	 }
+     return func() error {
+	 return exec.Command("fusermount", "-u", mountPoint).Run()
      }, nil
 }
 
 // returns a function to perform the unmount
-func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) (func(), error) {
+func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) (func() error, error) {
      encfsCmd := exec.Command("encfs", encryptedDir, mountPoint)
 
      encfsCmd.Env = os.Environ()
@@ -69,12 +66,16 @@ func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) 
      	return nil, err
      }
 
-     return func() {
-	 err := exec.Command("fusermount", "-u", mountPoint).Run()
-	 if err != nil {
-	    panic("failed to perform encfs unmount")
-	 }
+     return func() error {
+	 return exec.Command("fusermount", "-u", mountPoint).Run()
      }, nil
+}
+
+func panicUnless(thunk func() error, panicStr string) {
+     err := thunk()
+     if err != nil {
+     	panic(panicStr)
+     }
 }
 
 func main() {
@@ -98,7 +99,7 @@ func main() {
 	if err != nil {
 	   panic("failed to make image available")
 	}
-	defer unmounter()
+	defer panicUnless(unmounter, "failed to undo makeImageAvailable")
 
 	encfsMountPoint := mountWorkspace + "/emnt"
 	if err = os.Mkdir(encfsMountPoint, 0755); err != nil {
@@ -110,7 +111,7 @@ func main() {
 	if err != nil {
 	   panic("unable to mount encfs")
 	}
-	defer encfsUnmounter()	
+	defer panicUnless(encfsUnmounter, "failed to unmount encfs")
 
 	bashCmd := withStdStreams(exec.Command("/bin/bash"))
 	bashCmd.Dir = mountWorkspace
