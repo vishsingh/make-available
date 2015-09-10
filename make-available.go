@@ -95,8 +95,7 @@ func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) 
 }
 
 func panicUnless(thunk func() error, panicStr string) {
-	err := thunk()
-	if err != nil {
+	if err := thunk(); err != nil {
 		panic(fmt.Sprintf("%s: %s", panicStr, err.Error()))
 	}
 }
