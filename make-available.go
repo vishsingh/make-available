@@ -22,6 +22,10 @@ type config struct {
 }
 
 func (c *config) check() error {
+        if len(c.host) == 0 || len(c.hostdir) == 0 || len(c.encfsConfig) == 0 || len(c.group) == 0 {
+	   return errors.New("config not fully filled out")
+	}
+
 	if c.doChecksum {
 		info, err := os.Stat(c.checksumFile)
 		if err != nil {
