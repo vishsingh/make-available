@@ -2,15 +2,13 @@ package main
 
 /*
 runit() {
-  go install github.com/vishsingh/make-available && /home/work/bin/make-available
+  go install github.com/vishsingh/make-available && "$GOPATH"/bin/make-available
 }
 */
 
 import "fmt"
 import "os"
 import "os/exec"
-
-//import "flag"
 
 type config struct {
 	host        string // Remote host holding the encfs tree
@@ -53,19 +51,9 @@ func run(cmd *exec.Cmd) error {
 
 // returns a function to perform the unmount
 func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
-	sshfsCmd := makeCommand("sshfs")
+	sshfsCmd := makeCommand("sshfs", cfg.host + ":" + cfg.hostdir, mountPoint, "-o", "ro")
 
-	args := []string{
-		cfg.host + ":" + cfg.hostdir,
-		mountPoint,
-		"-o",
-		"ro",
-	}
-	sshfsCmd.Args = append(sshfsCmd.Args, args...)
-
-	err := sshfsCmd.Run()
-
-	if err != nil {
+	if err := sshfsCmd.Run(); err != nil {
 		return nil, err
 	}
 
@@ -78,8 +66,7 @@ func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
 func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) (func() error, error) {
 	encfsCmd := makeCommand("encfs", encryptedDir, mountPoint)
 
-	encfsCmd.Env = os.Environ()
-	encfsCmd.Env = append(encfsCmd.Env, "ENCFS6_CONFIG="+encFsConfigPath)
+	encfsCmd.Env = append(os.Environ(), "ENCFS6_CONFIG=" + encFsConfigPath)
 
 	if err := encfsCmd.Run(); err != nil {
 		return nil, err
