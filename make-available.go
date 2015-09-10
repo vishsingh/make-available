@@ -9,12 +9,29 @@ runit() {
 import "fmt"
 import "os"
 import "os/exec"
+import "errors"
 
 type config struct {
 	host        string // Remote host holding the encfs tree
 	hostdir     string // Path to the encfs tree on the remote host
 	encfsConfig string // Path to the encfs config on the local filesystem
 	group       string // If run as root, users in this group will be able to access the mounted data
+	doChecksum  bool   // Perform checksums of all files in the mounted filesystem?
+	checksumFile string // Path to a file containing previous known checksums
+}
+
+func (c *config) check() error {
+     	if c.doChecksum {
+	   	info, err := os.Stat(c.checksumFile)
+		if err != nil {
+		       return errors.New("unable to access checksum file")
+		}
+		if !info.Mode().IsRegular() {
+                       return errors.New("checksum file is not a regular file")
+		}
+	}
+
+	return nil
 }
 
 func withStdStreams(cmd *exec.Cmd) *exec.Cmd {
@@ -86,6 +103,10 @@ func panicUnless(thunk func() error, panicStr string) {
 
 func main() {
 	cfg := getConfig()
+
+	if err := cfg.check(); err != nil {
+	   panic(err)
+	}
 
 	mountWorkspace := "/tmp/makeavailmnt"
 	err := os.Mkdir(mountWorkspace, 0700)
