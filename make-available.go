@@ -12,31 +12,31 @@ import "os/exec"
 import "errors"
 
 type config struct {
-	host        string // Remote host holding the encfs tree
-	hostdir     string // Path to the encfs tree on the remote host
-	encfsConfig string // Path to the encfs config on the local filesystem
-	group       string // If run as root, users in this group will be able to access the mounted data
-	doChecksum  bool   // Perform checksums of all files in the mounted filesystem?
-	checksumFile string // Path to a file containing previous known checksums
+	host                string // Remote host holding the encfs tree
+	hostdir             string // Path to the encfs tree on the remote host
+	encfsConfig         string // Path to the encfs config on the local filesystem
+	group               string // If run as root, users in this group will be able to access the mounted data
+	doChecksum          bool   // Perform checksums of all files in the mounted filesystem?
+	checksumFile        string // Path to a file containing previous known checksums
 	checksumTreeProgram string // Path to a program that produces the checksums of all files under a given directory
 }
 
 func (c *config) check() error {
-     	if c.doChecksum {
-	   	info, err := os.Stat(c.checksumFile)
+	if c.doChecksum {
+		info, err := os.Stat(c.checksumFile)
 		if err != nil {
-		       return errors.New("unable to access checksum file")
+			return errors.New("unable to access checksum file")
 		}
 		if !info.Mode().IsRegular() {
-                       return errors.New("checksum file is not a regular file")
+			return errors.New("checksum file is not a regular file")
 		}
 
 		info, err = os.Stat(c.checksumTreeProgram)
 		if err != nil {
-		       return errors.New("unable to access checksum tree program")
+			return errors.New("unable to access checksum tree program")
 		}
-		if info.Mode() & 0111 == 0 {
-		       return errors.New("checksum tree program is not executable")
+		if info.Mode()&0111 == 0 {
+			return errors.New("checksum tree program is not executable")
 		}
 	}
 
@@ -77,7 +77,7 @@ func run(cmd *exec.Cmd) error {
 
 // returns a function to perform the unmount
 func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
-	sshfsCmd := makeCommand("sshfs", cfg.host + ":" + cfg.hostdir, mountPoint, "-o", "ro")
+	sshfsCmd := makeCommand("sshfs", cfg.host+":"+cfg.hostdir, mountPoint, "-o", "ro")
 
 	if err := sshfsCmd.Run(); err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
 func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) (func() error, error) {
 	encfsCmd := makeCommand("encfs", encryptedDir, mountPoint)
 
-	encfsCmd.Env = append(os.Environ(), "ENCFS6_CONFIG=" + encFsConfigPath)
+	encfsCmd.Env = append(os.Environ(), "ENCFS6_CONFIG="+encFsConfigPath)
 
 	if err := encfsCmd.Run(); err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func main() {
 	cfg := getConfig()
 
 	if err := cfg.check(); err != nil {
-	   panic(err)
+		panic(err)
 	}
 
 	mountWorkspace := "/tmp/makeavailmnt"
