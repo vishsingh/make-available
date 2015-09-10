@@ -18,6 +18,7 @@ type config struct {
 	group       string // If run as root, users in this group will be able to access the mounted data
 	doChecksum  bool   // Perform checksums of all files in the mounted filesystem?
 	checksumFile string // Path to a file containing previous known checksums
+	checksumTreeProgram string // Path to a program that produces the checksums of all files under a given directory
 }
 
 func (c *config) check() error {
@@ -28,6 +29,14 @@ func (c *config) check() error {
 		}
 		if !info.Mode().IsRegular() {
                        return errors.New("checksum file is not a regular file")
+		}
+
+		info, err = os.Stat(c.checksumTreeProgram)
+		if err != nil {
+		       return errors.New("unable to access checksum tree program")
+		}
+		if info.Mode() & 0111 == 0 {
+		       return errors.New("checksum tree program is not executable")
 		}
 	}
 
