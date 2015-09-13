@@ -107,7 +107,7 @@ func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) 
 	}, nil
 }
 
-func doChecksum(cfg *config, encfsMountPoint string) {
+func doChecksum(cfg *config, encfsMountPoint string) error {
 	intermediateFile := cfg.checksumFile+".new"
 
 	checksumRoot := encfsMountPoint
@@ -118,7 +118,7 @@ func doChecksum(cfg *config, encfsMountPoint string) {
 	var intermediateFileStream *os.File
 	var err error
 	if intermediateFileStream, err = os.Create(intermediateFile); err != nil {
-		   panic(err)
+		   return err
 	}
 	defer intermediateFileStream.Close()
 
@@ -126,16 +126,17 @@ func doChecksum(cfg *config, encfsMountPoint string) {
 	checksumCmd.Stderr = os.Stderr
 
 	if err = checksumCmd.Run(); err != nil {
-		   panic(err)
+		   return err
 	}
 
 	intermediateFileStream.Close()
 
 	if err = os.Rename(intermediateFile, cfg.checksumFile); err != nil {
-		   panic(err)
+		   return err
 	}
 
 	fmt.Printf("Checksum file updated at %s.\n", cfg.checksumFile)
+	return nil
 }
 
 func panicUnless(thunk func() error, panicStr string) {
@@ -190,6 +191,8 @@ func main() {
 	if cfg.doChecksum {
 		// todo: remount as read-only if necessary
 
-		doChecksum(cfg, encfsMountPoint)
+		if err := doChecksum(cfg, encfsMountPoint); err != nil {
+		   panic(err)
+		}
 	}
 }
