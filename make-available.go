@@ -10,6 +10,7 @@ import "fmt"
 import "os"
 import "os/exec"
 import "errors"
+import "runtime"
 
 type config struct {
 	host                string // Remote host holding the encfs tree
@@ -107,6 +108,16 @@ func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) 
 	}, nil
 }
 
+func annotate(err error) error {
+        _, file, line, ok := runtime.Caller(1)
+
+	if !ok {
+	   return err
+	}
+
+	return fmt.Errorf("%s, line %d: %s", file, line, err.Error())
+}
+
 func doChecksum(cfg *config, encfsMountPoint string) error {
 	intermediateFile := cfg.checksumFile+".new"
 
@@ -118,7 +129,7 @@ func doChecksum(cfg *config, encfsMountPoint string) error {
 	var intermediateFileStream *os.File
 	var err error
 	if intermediateFileStream, err = os.Create(intermediateFile); err != nil {
-		   return err
+		   return annotate(err)
 	}
 	defer intermediateFileStream.Close()
 
@@ -126,13 +137,13 @@ func doChecksum(cfg *config, encfsMountPoint string) error {
 	checksumCmd.Stderr = os.Stderr
 
 	if err = checksumCmd.Run(); err != nil {
-		   return err
+		   return annotate(err)
 	}
 
 	intermediateFileStream.Close()
 
 	if err = os.Rename(intermediateFile, cfg.checksumFile); err != nil {
-		   return err
+		   return annotate(err)
 	}
 
 	fmt.Printf("Checksum file updated at %s.\n", cfg.checksumFile)
