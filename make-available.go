@@ -11,6 +11,7 @@ import "os"
 import "os/exec"
 import "errors"
 import "runtime"
+import "os/user"
 
 type config struct {
 	host                string // Remote host holding the encfs tree
@@ -87,6 +88,12 @@ func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
 	if !cfg.mountRw {
 	        sshfsCmd.Args = append(sshfsCmd.Args, "-o", "ro")
 	}
+
+	u, err := user.Current()
+	if err != nil {
+	        return nil, annotate(err)
+	}
+	sshfsCmd.Args = append(sshfsCmd.Args, "-o", "uid="+u.Uid, "-o", "gid="+u.Gid)	
 
 	if err := sshfsCmd.Run(); err != nil {
 		return nil, err
