@@ -23,8 +23,8 @@ type config struct {
 }
 
 func (c *config) check() error {
-        if len(c.host) == 0 || len(c.hostdir) == 0 || len(c.encfsConfig) == 0 || len(c.group) == 0 {
-	   return errors.New("config not fully filled out")
+	if len(c.host) == 0 || len(c.hostdir) == 0 || len(c.encfsConfig) == 0 || len(c.group) == 0 {
+		return errors.New("config not fully filled out")
 	}
 
 	if c.doChecksum {
@@ -109,17 +109,17 @@ func mountEncFs(encFsConfigPath string, encryptedDir string, mountPoint string) 
 }
 
 func annotate(err error) error {
-        _, file, line, ok := runtime.Caller(1)
+	_, file, line, ok := runtime.Caller(1)
 
 	if !ok {
-	   return err
+		return err
 	}
 
 	return fmt.Errorf("%s, line %d: %s", file, line, err.Error())
 }
 
 func doChecksum(cfg *config, encfsMountPoint string) error {
-	intermediateFile := cfg.checksumFile+".new"
+	intermediateFile := cfg.checksumFile + ".new"
 
 	checksumRoot := encfsMountPoint
 
@@ -129,7 +129,7 @@ func doChecksum(cfg *config, encfsMountPoint string) error {
 	var intermediateFileStream *os.File
 	var err error
 	if intermediateFileStream, err = os.Create(intermediateFile); err != nil {
-		   return annotate(err)
+		return annotate(err)
 	}
 	defer intermediateFileStream.Close()
 
@@ -137,13 +137,13 @@ func doChecksum(cfg *config, encfsMountPoint string) error {
 	checksumCmd.Stderr = os.Stderr
 
 	if err = checksumCmd.Run(); err != nil {
-		   return annotate(err)
+		return annotate(err)
 	}
 
 	intermediateFileStream.Close()
 
 	if err = os.Rename(intermediateFile, cfg.checksumFile); err != nil {
-		   return annotate(err)
+		return annotate(err)
 	}
 
 	fmt.Printf("Checksum file updated at %s.\n", cfg.checksumFile)
@@ -203,7 +203,7 @@ func main() {
 		// todo: remount as read-only if necessary
 
 		if err := doChecksum(cfg, encfsMountPoint); err != nil {
-		   panic(err)
+			panic(err)
 		}
 	}
 }
