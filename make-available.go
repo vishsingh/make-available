@@ -16,6 +16,7 @@ type config struct {
 	host                string // Remote host holding the encfs tree
 	hostdir             string // Path to the encfs tree on the remote host
 	encfsConfig         string // Path to the encfs config on the local filesystem
+	mountRw             bool   // Mount the filesystem read-write, rather than read-only?
 	doChecksum          bool   // Perform checksums of all files in the mounted filesystem?
 	checksumFile        string // Path to a file containing previous known checksums
 	checksumTreeProgram string // Path to a program that produces the checksums of all files under a given directory
@@ -81,7 +82,11 @@ func run(cmd *exec.Cmd) error {
 
 // returns a function to perform the unmount
 func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
-	sshfsCmd := makeCommand("sshfs", cfg.host+":"+cfg.hostdir, mountPoint, "-o", "ro")
+	sshfsCmd := makeCommand("sshfs", cfg.host+":"+cfg.hostdir, mountPoint)
+
+	if !cfg.mountRw {
+	        sshfsCmd.Args = append(sshfsCmd.Args, "-o", "ro")
+	}
 
 	if err := sshfsCmd.Run(); err != nil {
 		return nil, err
