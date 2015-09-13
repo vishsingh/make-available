@@ -16,14 +16,13 @@ type config struct {
 	host                string // Remote host holding the encfs tree
 	hostdir             string // Path to the encfs tree on the remote host
 	encfsConfig         string // Path to the encfs config on the local filesystem
-	group               string // If run as root, users in this group will be able to access the mounted data
 	doChecksum          bool   // Perform checksums of all files in the mounted filesystem?
 	checksumFile        string // Path to a file containing previous known checksums
 	checksumTreeProgram string // Path to a program that produces the checksums of all files under a given directory
 }
 
 func (c *config) check() error {
-	if len(c.host) == 0 || len(c.hostdir) == 0 || len(c.encfsConfig) == 0 || len(c.group) == 0 {
+	if len(c.host) == 0 || len(c.hostdir) == 0 || len(c.encfsConfig) == 0 {
 		return errors.New("config not fully filled out")
 	}
 
