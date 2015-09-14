@@ -2,7 +2,7 @@ package main
 
 /*
 runit() {
-  go install github.com/vishsingh/make-available && "$GOPATH"/bin/make-available
+  go install github.com/vishsingh/make-available && "$GOPATH"/bin/make-available "$@"
 }
 */
 
@@ -12,15 +12,19 @@ import "os/exec"
 import "errors"
 import "runtime"
 import "os/user"
+import "flag"
 
 type config struct {
 	host                string // Remote host holding the encfs tree
 	hostdir             string // Path to the encfs tree on the remote host
 	encfsConfig         string // Path to the encfs config on the local filesystem
-	mountRw             bool   // Mount the filesystem read-write, rather than read-only?
 	doChecksum          bool   // Perform checksums of all files in the mounted filesystem?
 	checksumFile        string // Path to a file containing previous known checksums
 	checksumTreeProgram string // Path to a program that produces the checksums of all files under a given directory
+
+	/** Controlled by flags **/
+
+	mountRw             bool   // Mount the filesystem read-write, rather than read-only?
 }
 
 func (c *config) check() error {
@@ -169,6 +173,9 @@ func panicUnless(thunk func() error, panicStr string) {
 
 func main() {
 	cfg := getConfig()
+
+	flag.BoolVar(&cfg.mountRw, "rw", false, "Mount the filesystem read-write, rather than read-only")
+	flag.Parse()
 
 	if err := cfg.check(); err != nil {
 		panic(err)
