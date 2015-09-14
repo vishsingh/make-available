@@ -14,26 +14,57 @@ import "runtime"
 import "os/user"
 import "flag"
 
-type config struct {
-	host                string // Remote host holding the encfs tree
-	hostdir             string // Path to the encfs tree on the remote host
+type mountSpec struct {
+        name                string // Name of this spec; --name on the command line selects this spec
+        remoteDir           string // Path to the encfs tree on the remote host
 	encfsConfig         string // Path to the encfs config on the local filesystem
 	checksumFile        string // Path to a file containing previous known checksums
+}
+
+type config struct {
+	host                string // Remote host holding the encfs tree
 	checksumTreeProgram string // Path to a program that produces the checksums of all files under a given directory
+	specs               []mountSpec
 
 	/** Controlled by flags **/
 
 	mountRw             bool   // Mount the filesystem read-write, rather than read-only?
 	doChecksum          bool   // Perform checksums of all files in the mounted filesystem?
+	selectedSpec        *mountSpec
+}
+
+func (s *mountSpec) check() error {
+	if len(s.name) == 0 || len(s.remoteDir) == 0 || len(s.encfsConfig) == 0 {
+		return errors.New("config not fully filled out")
+	}
+	return nil        
 }
 
 func (c *config) check() error {
-	if len(c.host) == 0 || len(c.hostdir) == 0 || len(c.encfsConfig) == 0 {
+	if len(c.host) == 0 {
 		return errors.New("config not fully filled out")
 	}
 
+        if c.specs == nil {
+		return errors.New("config not fully filled out")
+	}
+	for _, spec := range c.specs {
+	        if err := spec.check(); err != nil {
+		        return err
+		}
+	}
+
+     	s := c.selectedSpec
+        if s == nil {
+		return errors.New("no mountSpec was selected")
+	}
+
+	if err := s.check(); err != nil {
+		return err
+	}
+
 	if c.doChecksum {
-		info, err := os.Stat(c.checksumFile)
+		info, err := os.Stat(s.checksumFile)
 		if err != nil {
 			return errors.New("unable to access checksum file")
 		}
@@ -87,7 +118,7 @@ func run(cmd *exec.Cmd) error {
 
 // returns a function to perform the unmount
 func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
-	sshfsCmd := makeCommand("sshfs", cfg.host+":"+cfg.hostdir, mountPoint)
+	sshfsCmd := makeCommand("sshfs", cfg.host+":"+cfg.selectedSpec.remoteDir, mountPoint)
 
 	if !cfg.mountRw {
 	        sshfsCmd.Args = append(sshfsCmd.Args, "-o", "ro")
@@ -134,11 +165,11 @@ func annotate(err error) error {
 }
 
 func doChecksum(cfg *config, encfsMountPoint string) error {
-	intermediateFile := cfg.checksumFile + ".new"
+	intermediateFile := cfg.selectedSpec.checksumFile + ".new"
 
 	checksumRoot := encfsMountPoint
 
-	checksumCmd := exec.Command(cfg.checksumTreeProgram, ".", cfg.checksumFile)
+	checksumCmd := exec.Command(cfg.checksumTreeProgram, ".", cfg.selectedSpec.checksumFile)
 	checksumCmd.Dir = checksumRoot
 
 	var intermediateFileStream *os.File
@@ -157,11 +188,11 @@ func doChecksum(cfg *config, encfsMountPoint string) error {
 
 	intermediateFileStream.Close()
 
-	if err = os.Rename(intermediateFile, cfg.checksumFile); err != nil {
+	if err = os.Rename(intermediateFile, cfg.selectedSpec.checksumFile); err != nil {
 		return annotate(err)
 	}
 
-	fmt.Printf("Checksum file updated at %s.\n", cfg.checksumFile)
+	fmt.Printf("Checksum file updated at %s.\n", cfg.selectedSpec.checksumFile)
 	return nil
 }
 
@@ -176,10 +207,23 @@ func main() {
 
 	rwFlag           := flag.Bool("rw", false, "Mount the filesystem read-write, rather than read-only")
 	noChecksumFlag   := flag.Bool("no-checksum", false, "Do not perform a checksum after user is done with the filesystem")
+
+	specNameFlags := make([]bool, len(cfg.specs))
+	for i, spec := range cfg.specs {
+		flag.BoolVar(&(specNameFlags[i]), spec.name, false, fmt.Sprintf("Mount the '%s' filesystem", spec.name))
+	}
+
 	flag.Parse()
 
 	cfg.mountRw = *rwFlag
 	cfg.doChecksum = *rwFlag && !*noChecksumFlag
+
+	for i, specFlag := range specNameFlags {
+	        if specFlag {
+		   	cfg.selectedSpec = &(cfg.specs[i])
+		        break
+		}
+	}
 
 	if err := cfg.check(); err != nil {
 		panic(err)
@@ -211,7 +255,7 @@ func main() {
 	}
 	defer os.Remove(encfsMountPoint)
 
-	encfsUnmounter, err := mountEncFs(cfg.encfsConfig, mountPoint, encfsMountPoint)
+	encfsUnmounter, err := mountEncFs(cfg.selectedSpec.encfsConfig, mountPoint, encfsMountPoint)
 	if err != nil {
 		panic("unable to mount encfs")
 	}
