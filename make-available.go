@@ -15,10 +15,10 @@ import "os/user"
 import "flag"
 
 type mountSpec struct {
-        name                string // Name of this spec; --name on the command line selects this spec
-        remoteDir           string // Path to the encfs tree on the remote host
-	encfsConfig         string // Path to the encfs config on the local filesystem
-	checksumFile        string // Path to a file containing previous known checksums
+	name         string // Name of this spec; --name on the command line selects this spec
+	remoteDir    string // Path to the encfs tree on the remote host
+	encfsConfig  string // Path to the encfs config on the local filesystem
+	checksumFile string // Path to a file containing previous known checksums
 }
 
 type config struct {
@@ -28,16 +28,16 @@ type config struct {
 
 	/** Controlled by flags **/
 
-	mountRw             bool   // Mount the filesystem read-write, rather than read-only?
-	doChecksum          bool   // Perform checksums of all files in the mounted filesystem?
-	selectedSpec        *mountSpec
+	mountRw      bool // Mount the filesystem read-write, rather than read-only?
+	doChecksum   bool // Perform checksums of all files in the mounted filesystem?
+	selectedSpec *mountSpec
 }
 
 func (s *mountSpec) check() error {
 	if len(s.name) == 0 || len(s.remoteDir) == 0 || len(s.encfsConfig) == 0 {
 		return errors.New("config not fully filled out")
 	}
-	return nil        
+	return nil
 }
 
 func (c *config) check() error {
@@ -45,17 +45,17 @@ func (c *config) check() error {
 		return errors.New("config not fully filled out")
 	}
 
-        if c.specs == nil {
+	if c.specs == nil {
 		return errors.New("config not fully filled out")
 	}
 	for _, spec := range c.specs {
-	        if err := spec.check(); err != nil {
-		        return err
+		if err := spec.check(); err != nil {
+			return err
 		}
 	}
 
-     	s := c.selectedSpec
-        if s == nil {
+	s := c.selectedSpec
+	if s == nil {
 		return errors.New("no mountSpec was selected")
 	}
 
@@ -121,14 +121,14 @@ func makeImageAvailable(mountPoint string, cfg *config) (func() error, error) {
 	sshfsCmd := makeCommand("sshfs", cfg.host+":"+cfg.selectedSpec.remoteDir, mountPoint)
 
 	if !cfg.mountRw {
-	        sshfsCmd.Args = append(sshfsCmd.Args, "-o", "ro")
+		sshfsCmd.Args = append(sshfsCmd.Args, "-o", "ro")
 	}
 
 	u, err := user.Current()
 	if err != nil {
-	        return nil, annotate(err)
+		return nil, annotate(err)
 	}
-	sshfsCmd.Args = append(sshfsCmd.Args, "-o", "uid="+u.Uid, "-o", "gid="+u.Gid)	
+	sshfsCmd.Args = append(sshfsCmd.Args, "-o", "uid="+u.Uid, "-o", "gid="+u.Gid)
 
 	if err := sshfsCmd.Run(); err != nil {
 		return nil, err
@@ -205,8 +205,8 @@ func panicUnless(thunk func() error, panicStr string) {
 func main() {
 	cfg := getConfig()
 
-	rwFlag           := flag.Bool("rw", false, "Mount the filesystem read-write, rather than read-only")
-	noChecksumFlag   := flag.Bool("no-checksum", false, "Do not perform a checksum after user is done with the filesystem")
+	rwFlag := flag.Bool("rw", false, "Mount the filesystem read-write, rather than read-only")
+	noChecksumFlag := flag.Bool("no-checksum", false, "Do not perform a checksum after user is done with the filesystem")
 
 	specNameFlags := make([]bool, len(cfg.specs))
 	for i, spec := range cfg.specs {
@@ -219,9 +219,9 @@ func main() {
 	cfg.doChecksum = *rwFlag && !*noChecksumFlag
 
 	for i, specFlag := range specNameFlags {
-	        if specFlag {
-		   	cfg.selectedSpec = &(cfg.specs[i])
-		        break
+		if specFlag {
+			cfg.selectedSpec = &(cfg.specs[i])
+			break
 		}
 	}
 
