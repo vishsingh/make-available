@@ -207,6 +207,7 @@ func main() {
 
 	rwFlag := flag.Bool("rw", false, "Mount the filesystem read-write, rather than read-only")
 	noChecksumFlag := flag.Bool("no-checksum", false, "Do not perform a checksum after user is done with the filesystem")
+	forceChecksumFlag := flag.Bool("force-checksum", false, "Force a checksum even if it's not necessary")
 
 	specNameFlags := make([]bool, len(cfg.specs))
 	for i, spec := range cfg.specs {
@@ -215,8 +216,12 @@ func main() {
 
 	flag.Parse()
 
+	if *noChecksumFlag && *forceChecksumFlag {
+	        panic("inconsistent flags specified")
+	}
+
 	cfg.mountRw = *rwFlag
-	cfg.doChecksum = *rwFlag && !*noChecksumFlag
+	cfg.doChecksum = (*rwFlag && !*noChecksumFlag) || *forceChecksumFlag
 
 	for i, specFlag := range specNameFlags {
 		if specFlag {
