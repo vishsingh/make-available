@@ -18,13 +18,13 @@ type config struct {
 	host                string // Remote host holding the encfs tree
 	hostdir             string // Path to the encfs tree on the remote host
 	encfsConfig         string // Path to the encfs config on the local filesystem
-	doChecksum          bool   // Perform checksums of all files in the mounted filesystem?
 	checksumFile        string // Path to a file containing previous known checksums
 	checksumTreeProgram string // Path to a program that produces the checksums of all files under a given directory
 
 	/** Controlled by flags **/
 
 	mountRw             bool   // Mount the filesystem read-write, rather than read-only?
+	doChecksum          bool   // Perform checksums of all files in the mounted filesystem?
 }
 
 func (c *config) check() error {
@@ -175,7 +175,10 @@ func main() {
 	cfg := getConfig()
 
 	flag.BoolVar(&cfg.mountRw, "rw", false, "Mount the filesystem read-write, rather than read-only")
+	noChecksumFlag := flag.Bool("no-checksum", false, "Do not perform a checksum after user is done with the filesystem")
 	flag.Parse()
+
+	cfg.doChecksum = cfg.mountRw && !*noChecksumFlag
 
 	if err := cfg.check(); err != nil {
 		panic(err)
