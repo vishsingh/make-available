@@ -174,11 +174,12 @@ func panicUnless(thunk func() error, panicStr string) {
 func main() {
 	cfg := getConfig()
 
-	flag.BoolVar(&cfg.mountRw, "rw", false, "Mount the filesystem read-write, rather than read-only")
-	noChecksumFlag := flag.Bool("no-checksum", false, "Do not perform a checksum after user is done with the filesystem")
+	rwFlag           := flag.Bool("rw", false, "Mount the filesystem read-write, rather than read-only")
+	noChecksumFlag   := flag.Bool("no-checksum", false, "Do not perform a checksum after user is done with the filesystem")
 	flag.Parse()
 
-	cfg.doChecksum = cfg.mountRw && !*noChecksumFlag
+	cfg.mountRw = *rwFlag
+	cfg.doChecksum = *rwFlag && !*noChecksumFlag
 
 	if err := cfg.check(); err != nil {
 		panic(err)
